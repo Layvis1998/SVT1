@@ -100,7 +100,7 @@ int main()
       
       row_index[k + 1] = row_index[k] + 5;
     }
-    if ( (i == 0) && (j >= 1) && (j < bn) )  // top border
+    if ( (i == 0) && (j >= 1) && (j < bn) )  // left border
     {
       values[cur] = - dy / sh;
       column_index[cur] = i * n + (j - 1);

@@ -156,19 +156,19 @@ void Bottom_Neumann1(int i, int j, int k)
 void BL_Neumann1(int i, int j, int k)
 { 
   
-  column_index[cur] = bbn * n;
-  values[cur] = dx / sh / sqrt(2);
-  cur++;
-  
   column_index[cur] = bn * n;
   values[cur] = - (dx + dy) / sh / sqrt(2);
   cur++;
   
-  column_index[cur] = bn * n + 1;
-  values[cur] =  dy / sh / sqrt(2);
+  row_index[k + 1] = row_index[k] + 1;
+}
+
+void Known_Values(int i, int j, int k)
+{
+  values[cur] = 1;
+  column_index[cur] = i * n + j;
   cur++;
-  
-  row_index[k + 1] = row_index[k] + 3;
+  row_index[k + 1] = row_index[k] + 1; 
 }
 
 
@@ -228,25 +228,12 @@ int main()
   {
     int i = k / n;
     int j = k % n;
-    
-    
+        
     if ( (i == 0) && (j >= 0) && (j <= bn) )
-    { 
-      values[cur] = 1;
-      column_index[cur] = i * n + j;
-      cur++;
-      row_index[k + 1] = row_index[k] + 1; 
-    }
-    
+      Known_Values(i, j, k);
     
     if ( (j == bn) && (i >= 1) && (i <= bn) )     
-    { 
-      values[cur] = 1;
-      column_index[cur] = i * n + j;
-      cur++;
-      row_index[k + 1] = row_index[k] + 1; 
-    }
-    
+      Known_Values(i, j, k);
     
     if ( (i > 1) && (i < bn) && (j > 0) && (j < bbn) ) 
       No_borders(i, j, k);
@@ -259,7 +246,6 @@ int main()
     
     if ( (i == 1) && (j == bbn) )
       TR_Dirichlet(i, j, k);
-
 
     if ( (j == 0) && (i >= 1) && (i <= bbn) )
       Left_Neumann1(i, j, k);

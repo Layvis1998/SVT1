@@ -9,11 +9,11 @@ using namespace std;
 
 int Neumann_type = 1;   //type of Neumann borders
 
-int n = 10;        
+int n = 15;        
 int bn = n - 1;
 int bbn = bn - 1;
 int bbbn = bbn - 1;
-double h = 1.0 / n;
+double h = 1.0 / bn;
 double sh = h * h;
 int N = n * n;  
 int aN = N + 1;
@@ -25,23 +25,14 @@ int* column_index;
 double* values;
 int cur = 0;
   
-int dx = 1;
-int dy = 1;
-    
-double f(double x, double y)
-{
-  return -12.0 * (pow(x - y, 2) + 1e-5) * (5.0 * pow(x - y, 2) + 1e-5);
-}
+double dx = 1;
+double dy = 1;
 
-double u_answer(double x, double y)
-{
-  return pow((x - y) * (x - y) + 1e-5, 3);
-}
 
 void No_borders(int i, int j, int k)
 {
-  column_index[cur] = (i - 1) * n + j;
   values[cur] = - dx / sh;
+  column_index[cur] = (i - 1) * n + j;
   cur++;
 
   values[cur] = - dy / sh;
@@ -83,8 +74,7 @@ void TR_Dirichlet(int i, int j, int k)
 
 void Top_Dirichlet(int i, int j, int k)
 {
-
-  values[cur] = - dx / sh;
+  values[cur] = - dy / sh;
   column_index[cur] = i * n + (j - 1);
   cur++;
       
@@ -105,8 +95,8 @@ void Top_Dirichlet(int i, int j, int k)
 
 void Right_Dirichlet(int i, int j, int k)
 {
-  column_index[cur] = (i - 1) * n + j;
   values[cur] = - dx / sh;
+  column_index[cur] = (i - 1) * n + j;
   cur++;
 
   values[cur] = - dy / sh;
@@ -125,15 +115,14 @@ void Right_Dirichlet(int i, int j, int k)
 }
 
 
-
 void Left_Neumann1(int i, int j, int k)
 {
-  column_index[cur] = i * n;
   values[cur] = - dy / sh;
+  column_index[cur] = i * n + j;
   cur++;
 
-  column_index[cur] = i * n + 1;
   values[cur] =  dy / sh;
+  column_index[cur] = i * n + (j + 1);
   cur++;
   
   row_index[k + 1] = row_index[k] + 2; 
@@ -141,12 +130,12 @@ void Left_Neumann1(int i, int j, int k)
 
 void Bottom_Neumann1(int i, int j, int k)
 {
-  column_index[cur] = bbn * n + j;
   values[cur] = dx / sh;
+  column_index[cur] = (i - 1) * n + j;
   cur++;
 
-  column_index[cur] = bn * n + j;
   values[cur] =  - dx / sh;
+  column_index[cur] = i * n + j;
   cur++;
   
   row_index[k + 1] = row_index[k] + 2; 
@@ -155,71 +144,83 @@ void Bottom_Neumann1(int i, int j, int k)
 
 void BL_Neumann1(int i, int j, int k)
 { 
-  
-  column_index[cur] = bn * n;
-  values[cur] = - (dx + dy) / sh / sqrt(2);
+  values[cur] = (dx + dy) / sh  * (1 / sqrt(2));
+  column_index[cur] = bbn * n + 1;
   cur++;
-  
-  row_index[k + 1] = row_index[k] + 1;
-}
 
-void Known_Values(int i, int j, int k)
-{
-  values[cur] = 1;
-  column_index[cur] = i * n + j;
+  values[cur] = - (dx + dy) / sh * (1 / sqrt(2));
+  column_index[cur] = bn * n;
   cur++;
-  row_index[k + 1] = row_index[k] + 1; 
+
+  row_index[k + 1] = row_index[k] + 2;
 }
 
 
 int main()
 {
+  double* b = new double[N];   
   double* G_Dirichlet_top = new double[bbn];
   double* G_Dirichlet_right = new double[bbn];
   double* G_Neumann_left = new double[bbn];
   double* G_Neumann_bottom = new double[bbn];
-  double G_BL = 2000;
-  double G_TR = 0;
-  double G_TL = 2000;
-  double G_BR = 0;
-  double* b = new double[N];   
-  
+
+  double G_BL =  (- (1/sqrt(2)) * dx * sin(M_PI * bn * h) * cos(0) * M_PI
+    +(1/sqrt(2)) * dy * sin(0) * cos(M_PI * bn * h)  * M_PI);
+  double G_TL = cos(0) * cos(0);   
+  double G_TR = cos(0) * cos(M_PI * bn * h);
+  double G_BR = cos(M_PI * bn * h) * cos(M_PI * bn* h);
+
+
   row_index = new int[aN]; 
 
   for (int k = 0; k < N; k++)
-    b[k] = 0;
-  
-  for (int a = 0; a < bbn; a++)
-    G_Dirichlet_top[a] = 0;
-    
-  for (int a = 0; a < bbn; a++)
-    G_Dirichlet_right[a] = 0;
+  {  
+    int i = k / n;
+    int j = k % n;
+    b[k] = (dx + dy) * cos(M_PI * i * h) * cos(M_PI * j * h) * M_PI * M_PI;
+  }
+
 
   for (int a = 0; a < bbn; a++)
-    G_Neumann_left[a] = 2000;
+    G_Dirichlet_top[a] = cos(0) * cos(M_PI * (a + 1) * h);
+    
+  for (int a = 0; a < bbn; a++)
+    G_Dirichlet_right[a] = cos(M_PI * (a + 1) * h ) * cos(M_PI * bn * h);
+
+  for (int a = 0; a < bbn; a++)
+    G_Neumann_left[a] = dy * sin(0) * cos(M_PI * (a + 1) * h) * M_PI;
   
   for (int a = 0; a < bbn; a++)
-    G_Neumann_bottom[a] = 0;
+    G_Neumann_bottom[a] = -dx * sin(M_PI * bn * h) * cos(M_PI * (a + 1) * h) * M_PI;
   
   for (int a = 1; a <= bbn; a++)
     b[a * n] = G_Neumann_left[a - 1] / h;
   
   for (int a = 1; a <= bbn; a++)
     b[bn*n + a] = G_Neumann_bottom[a - 1] / h; 
+  
 
   for (int a = 1; a <= bbn; a++)                       
-    b[a * n + bn] += G_Dirichlet_right[a - 1] * dy / sh;
+    b[a * n + bn] = G_Dirichlet_right[a - 1];
     
   for (int a = 1; a <= bbn; a++)
-    b[a] += G_Dirichlet_top[a - 1] * dx / sh;
+    b[a] = G_Dirichlet_top[a - 1];
+
 
   b[0] = G_TL;
   b[bn] = G_TR;
   b[n * n - 1] = G_BR;
   b[bn * n] = G_BL / h;
+   
+  for (int a = 1; a <= bbn; a++)
+    b[n + a] += (b[a] / sh * dx);
 
-  NNZ = 5 * bbn*bbn + 2*bbn + 2*bbn + 4*bbn + 4*bbn + 3 + (bn + bn + 1);  
-  column_index = new int[NNZ];
+  for (int a = 1; a <= bbn; a++)                       
+    b[a * n + bbn] += b[a * n + bn] / sh * dy;
+    
+
+  NNZ = (5 * bbn*bbn + 2*bbn + 2*bbn + 4*bbn + 4*bbn + 3) + (bn + bn + 2);               
+  column_index = new int[NNZ];                                                
   values = new double[NNZ];  
   row_index[0] = 0;  
   
@@ -229,12 +230,47 @@ int main()
     int i = k / n;
     int j = k % n;
         
-    if ( (i == 0) && (j >= 0) && (j <= bn) )
-      Known_Values(i, j, k);
+    if ( (i == 0) && (j >= 1) && (j <= bbn) )
+    {
+      values[cur] = 1;
+      column_index[cur] = i * n + j;
+      cur++;
+      row_index[k + 1] = row_index[k] + 1; 
+    }  
     
-    if ( (j == bn) && (i >= 1) && (i <= bn) )     
-      Known_Values(i, j, k);
+    if ( (j == bn) && (i >= 1) && (i < bn) )     
+    {
+      values[cur] = 1;
+      column_index[cur] = i * n + j;
+      cur++;
+      row_index[k + 1] = row_index[k] + 1; 
+    }
     
+    if ( (j == 0) && (i == 0) )     
+    {
+      values[cur] = 1;
+      column_index[cur] = i * n + j;
+      cur++;
+      row_index[k + 1] = row_index[k] + 1; 
+    }
+
+    if ( (j == bn) && (i == 0) )     
+    {
+      values[cur] = 1;
+      column_index[cur] = i * n + j;
+      cur++;
+      row_index[k + 1] = row_index[k] + 1; 
+    }
+
+    if ( (j == bn) && (i == bn) )     
+    {
+      values[cur] = 1;
+      column_index[cur] = i * n + j;
+      cur++;
+      row_index[k + 1] = row_index[k] + 1; 
+    }
+
+
     if ( (i > 1) && (i < bn) && (j > 0) && (j < bbn) ) 
       No_borders(i, j, k);
     

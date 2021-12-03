@@ -9,7 +9,7 @@ using namespace std;
 
 int Neumann_type = 1;   //type of Neumann borders
 
-int n = 15;        
+int n = 25;        
 int bn = n - 1;
 int bbn = bn - 1;
 int bbbn = bbn - 1;
@@ -18,16 +18,15 @@ double sh = h * h;
 int N = n * n;  
 int aN = N + 1;
 int b_N = bn * bn;
+  
+double dx = 1;
+double dy = 10;
 
 int NNZ;
 int* row_index;                       
 int* column_index;
 double* values;
 int cur = 0;
-  
-double dx = 1;
-double dy = 1;
-
 
 void No_borders(int i, int j, int k)
 {
@@ -144,6 +143,7 @@ void Bottom_Neumann1(int i, int j, int k)
 
 void BL_Neumann1(int i, int j, int k)
 { 
+
   values[cur] = (dx + dy) / sh  * (1 / sqrt(2));
   column_index[cur] = bbn * n + 1;
   cur++;
@@ -177,7 +177,7 @@ int main()
   {  
     int i = k / n;
     int j = k % n;
-    b[k] = (dx + dy) * cos(M_PI * i * h) * cos(M_PI * j * h) * M_PI * M_PI;
+    b[k] =  (dx + dy) * cos(M_PI * i * h) * cos(M_PI * j * h) * M_PI * M_PI;
   }
 
 
@@ -340,9 +340,9 @@ int main()
   umfpack_di_free_numeric (&Numeric);  
   cout << "time of solving: ms " << time_solve * 1e3 << "\n\n";
   
-
-  //Checking
-  cout << "Solution:\n ";
+  /*
+  //Printing solution
+  cout << "\nSolution:\n\n";
   for (int h = 0; h < n; h++)
   {
     uint32_t hght = h * n;
@@ -353,5 +353,63 @@ int main()
     cout << u[hght + n - 1] << " ";
     cout<< "] \n";
   }
+  */
+
+
+  //Checking Ch-norm
+  double Ch = 2;
+  for (int i = 1; i < bn; i++)
+  {
+    uint32_t hght = i * n;
+    for (int j = 1; j < bn; j++)
+    {
+      double val = cos(M_PI * i * h) * cos(M_PI * j * h);
+      val = abs(val - u[hght + j]);
+      if (val < Ch)
+        Ch = val; 
+    } 
+  }
+  cout << "\n\nCh norm = " << Ch << "\n";
+
+  //Checking L2h-norm
+  double Lh = 0;
+  for (int i = 1; i < bn; i++)
+  {
+    uint32_t hght = i * n;
+    for (int j = 1; j < bn; j++)
+    {
+      double val = cos(M_PI * i * h) * cos(M_PI * j * h);
+      val = u[hght + j] - val;
+      val = val * val;
+      val = val * sh;
+
+      if ((i > 1) && (j > 1) && (i < bbn) && (j < bbn))
+        Lh += val;
+
+      if ((i == 1) && (j == 1))
+        Lh += 1/4 * val;
+      if ((i == bbn) && (j == bbn))
+        Lh += 1/4 * val;
+      if ((i == bbn) && (j == 1))
+        Lh += 1/4 * val;
+      if ((i == 1) && (j == bbn))
+        Lh += 1/4 * val;
+
+      if ((i > 1) && (i < bbn) && (j == 1))
+        Lh += 1/2 * val;
+      if ((i > 1) && (i < bbn) && (j == bbn))
+        Lh += 1/2 * val;    
+      if ((j > 1) && (j < bbn) && (i == 1))
+        Lh += 1/2 * val;
+      if ((j > 1) && (j < bbn) && (i == bbn))
+        Lh += 1/2 * val;           
+
+    } 
+  
+  }
+  Lh = sqrt(Lh);
+
+  cout << "Lh norm = " << Lh << "\n";
+
 
 }
